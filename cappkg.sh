@@ -90,7 +90,7 @@ echo ""
 sudo airodump-ng -c $channel --bssid $mac --output-format cap,csv -w captura $interfaz > /dev/null 2>&1 &
 
 handshakes=0
-while [ $(expr $handshakes) -lt 1 ]
+while [ $(( $handshakes)) -lt 1 ]
 do
   sleep 5
   echo -n "."
