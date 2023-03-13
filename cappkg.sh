@@ -10,7 +10,6 @@ cleanup() {
     rm captura-01.cap
     rm captura-01.csv
     rm output-01.csv
-    rm captmp.cap
     exit 1
 }
 
@@ -95,11 +94,10 @@ while [ $(expr $handshakes) -lt 1 ]
 do
   sleep 5
   echo -n "."
-  cp captura-01.cap captmp.cap
-  handshakes=$(cap2hccapx captmp.cap $ssid.hccapx | grep -oP "Written \K\d+(?= WPA Handshakes)") > /dev/null 
+  handshakes=$(aircrack-ng captura-01.cap | grep -oP '\(\K\d+(?=\s+handshake)')
 done
 echo "Handshake Encontrado. Terminando..."
 killall airodump-ng
-rm captmp.cap
+cap2hccapx captura-01.cap $ssid.hccapx
 mv captura-01.cap $ssid.cap
 mv captura-01.csv $ssid.csv
